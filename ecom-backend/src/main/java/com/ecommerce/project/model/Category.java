@@ -28,5 +28,7 @@ public class Category {
     //@Min(3)
     //@Max(10)
     //@Size(min = 3, max = 10)
+    //@Size(min = 5)
+    @Size(min = 5, message = "Category Name must contain atleast 5 characters")
     private String categoryName;
 }
