@@ -10,8 +10,14 @@ import com.ecommerce.project.repositories.ProductRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -117,5 +123,52 @@ public class ProductServiceImpl implements ProductService {
         productRepository.delete(productToBeDeleted);
 
         return modelMapper.map(productToBeDeleted, ProductDTO.class);
+    }
+
+    @Override
+    public ProductDTO updateProductImage(Long productId, MultipartFile image) throws IOException {
+
+        //Get the product from Database
+        Product productFromDb = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+
+        //Upload the image to server &
+        //Get the file name of uploaded image
+
+        String path = "images/";
+        String fileName = uploadImage(path, image);
+
+        //Update the new file name to the product
+        productFromDb.setImage(fileName);
+
+        //Save the updated product
+        Product updatedProduct = productRepository.save(productFromDb);
+
+        //return DTO after mapping product into DTO
+        return modelMapper.map(updatedProduct,ProductDTO.class);
+    }
+
+    private String uploadImage(String path, MultipartFile imageFile) throws IOException {
+        //Get the file name of original file
+        String originalFileName = imageFile.getOriginalFilename(); //.getOriginalFileName() will give us entire name
+                                                                    //with its extension
+                                            //If we use .getName() here, we will get StringIndexOutOfBoundException
+
+        //Rename the file uniquely i.e. Generate a Unique file name
+        String randomId = UUID.randomUUID().toString(); //UUID is an in-build class
+        String fileName = randomId.concat(originalFileName.substring(originalFileName.lastIndexOf('.')));
+                    //e.g.: hills.jpg (originalFileName) ===> 4545 (randomId) ===> 4545.jpg (newFileName)
+        String filePath = path + File.separator + fileName;
+
+        //Check if path exists and create
+        File folder = new File(path); //creating a File object from the received path
+        if (!folder.exists())
+            folder.mkdir();
+
+        //Upload to the server
+        Files.copy(imageFile.getInputStream(), Paths.get(filePath));
+
+        //return the file name
+        return fileName;
     }
 }
