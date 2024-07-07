@@ -1,22 +1,22 @@
 package com.ecommerce.project.payload;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class ProductResponse {
     private List<ProductDTO> content;
 
-    public ProductResponse() {
-    }
+    // Metadata of Pagination for frontend app to display
+    private Integer pageNumber;
+    private Integer pageSize;
+    private Long totalElements;
+    private Integer totalPages;
+    private boolean lastPage;
 
-    public ProductResponse(List<ProductDTO> content) {
-        this.content = content;
-    }
-
-    public List<ProductDTO> getContent() {
-        return content;
-    }
-
-    public void setContent(List<ProductDTO> content) {
-        this.content = content;
-    }
 }

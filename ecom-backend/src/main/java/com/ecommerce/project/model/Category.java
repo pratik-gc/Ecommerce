@@ -1,14 +1,11 @@
 package com.ecommerce.project.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.*;
+
+import java.util.List;
 
 //In the context of JPA, an Entity represents a table in a relational database
 //@Entity
@@ -17,9 +14,10 @@ import lombok.*;
 @Data //A shortcut for @ToString, @EqualsAndHashCode, @Getter on all fields, and @Setter on all non-final fields, and @RequiredArgsConstructor!
 @NoArgsConstructor
 @AllArgsConstructor
-//@Getter
-//@Setter
+@Getter
+@Setter
 public class Category {
+    @Setter
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long categoryId;
@@ -32,16 +30,9 @@ public class Category {
     @Size(min = 5, message = "Category Name must contain atleast 5 characters")
     private String categoryName;
 
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
+    private List<Product> products;
 
-    //@Getter & @Setter Lombok annotations doesn't work in my machine. Don't know why!!!!!!!!!!
-    //Therefore, creating Getters and Setters explicitly.
-    public Long getCategoryId() {
-        return categoryId;
-    }
-
-    public void setCategoryId(Long categoryId) {
-        this.categoryId = categoryId;
-    }
 
     public @NotBlank @Size(min = 5, message = "Category Name must contain atleast 5 characters") String getCategoryName() {
         return categoryName;

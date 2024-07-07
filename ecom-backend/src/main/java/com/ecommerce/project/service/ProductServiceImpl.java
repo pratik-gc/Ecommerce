@@ -1,5 +1,6 @@
 package com.ecommerce.project.service;
 
+import com.ecommerce.project.exceptions.APIException;
 import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.payload.ProductResponse;
 import com.ecommerce.project.repositories.CategoryRepository;
@@ -9,15 +10,15 @@ import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.repositories.ProductRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 public class ProductServiceImpl implements ProductService {
@@ -31,8 +32,22 @@ public class ProductServiceImpl implements ProductService {
     @Autowired
     private ModelMapper modelMapper;
 
+    @Autowired
+    private FileService fileService;
+
+    @Value("${project.image}")
+    private String path;    //path variable will get its value from application.properties file
+
     @Override
     public ProductDTO addProduct(ProductDTO productDTO, Long categoryId) {
+        //Check if the new product is already present of not
+        List<Product> newProductToBeAdded = productRepository.findAll().stream()
+                .filter(product -> product.getProductName().equals(productDTO.getProductName()))
+                .toList();
+        if (newProductToBeAdded.size()>0){
+            throw new APIException("Product Name is already present. Cannot add the product");
+        }
+
         Category category = categoryRespository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category","categoryId", categoryId));
         Product product = modelMapper.map(productDTO, Product.class);
@@ -45,21 +60,57 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ProductResponse getAllProducts() {
-        List<Product> products = productRepository.findAll();
+    public ProductResponse getAllProducts(Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+        //Check if any products are available or not in the productRepository
+        if (productRepository.count() == 0){
+            throw new APIException("There are no products available to show currently");
+        }
+
+        //Sort is an in-built class used to sort things
+        Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        //Pageable is an interface provided by SpringDataJPA and PageRequest is an implemention of Pageable Interface.
+        //Pageable pageDetails = PageRequest.of(pageNumber, pageSize);
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
+        Page<Product> productPage = productRepository.findAll(pageDetails);
+        List<Product> products = productPage.getContent();
+
+        //List<Product> products = productRepository.findAll();
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> modelMapper.map(product, ProductDTO.class))
                 .toList();
         ProductResponse productResponse = new ProductResponse();
         productResponse.setContent(productDTOS);
+
+        // Setting Paginaation Metadata for frontend application to consume for rendering
+        productResponse.setPageNumber(productPage.getNumber());
+        productResponse.setPageSize(productPage.getSize());
+        productResponse.setTotalElements(productPage.getTotalElements());
+        productResponse.setTotalPages(productPage.getTotalPages());
+        productResponse.setLastPage(productPage.isLast());
+
         return productResponse;
     }
 
     @Override
-    public ProductResponse searchProductByCategory(Long categoryId) {
+    public ProductResponse searchProductByCategory(Long categoryId, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
         //First get the category from categoryId
         Category category = categoryRespository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category","categoryId", categoryId));
+
+        //Sort is an in-built class used to sort things
+        Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        //Pageable is an interface provided by SpringDataJPA and PageRequest is an implemention of Pageable Interface.
+        //Pageable pageDetails = PageRequest.of(pageNumber, pageSize);
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
+        Page<Product> productPage = productRepository.findByCategoryOrderByPriceAsc(category, pageDetails);
+        List<Product> products = productPage.getContent();
+
 
         //======================This logic is also working================================
         //Now extract categoryId from all the products available in productRepository & compare with given categoryId
@@ -70,31 +121,68 @@ public class ProductServiceImpl implements ProductService {
         //System.out.println(products);
         //==============================END Of Logic====================================
 
-        List<Product> products = productRepository.findByCategoryOrderByPriceAsc(category);
+        if(products.isEmpty())
+            throw new APIException(category.getCategoryName() + " Category doesn't have any products");
 
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> modelMapper.map(product, ProductDTO.class))
                 .toList();
         ProductResponse productResponse = new ProductResponse();
         productResponse.setContent(productDTOS);
+
+        // Setting Paginaation Metadata for frontend application to consume for rendering
+        productResponse.setPageNumber(productPage.getNumber());
+        productResponse.setPageSize(productPage.getSize());
+        productResponse.setTotalElements(productPage.getTotalElements());
+        productResponse.setTotalPages(productPage.getTotalPages());
+        productResponse.setLastPage(productPage.isLast());
+
         return productResponse;
     }
 
     @Override
-    public ProductResponse getAllProductsByKeyword(String keyword) {
-        List<Product> products = productRepository.findByProductNameLikeIgnoreCase('%'+keyword+'%');
-                                                        // %keyword% =====> Pattern matching in the given String
+    public ProductResponse getAllProductsByKeyword(String keyword, Integer pageNumber, Integer pageSize, String sortBy, String sortOrder) {
+
+        //Check if productRepository has any products present in it or not
+        if (productRepository.count() == 0){
+            throw new APIException("There are no products available to show currently");
+        }
+
+        //Sort is an in-built class used to sort things
+        Sort sortByAndOrder = sortOrder.equalsIgnoreCase("asc")
+                ? Sort.by(sortBy).ascending()
+                : Sort.by(sortBy).descending();
+
+        //Pageable is an interface provided by SpringDataJPA and PageRequest is an implemention of Pageable Interface.
+        //Pageable pageDetails = PageRequest.of(pageNumber, pageSize);
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
+        Page<Product> productPage = productRepository.findByProductNameLikeIgnoreCase('%'+keyword+'%', pageDetails);
+                                                                    // %keyword% =====> Pattern matching in the given String
+        List<Product> products = productPage.getContent();
+
+        if(products.isEmpty())
+            throw new APIException("Products not found with keyword: " + keyword);
+
         List<ProductDTO> productDTOS = products.stream()
                 .map(product -> modelMapper.map(product, ProductDTO.class))
                 .toList();
         ProductResponse productResponse = new ProductResponse();
         productResponse.setContent(productDTOS);
+
+        // Setting Paginaation Metadata for frontend application to consume for rendering
+        productResponse.setPageNumber(productPage.getNumber());
+        productResponse.setPageSize(productPage.getSize());
+        productResponse.setTotalElements(productPage.getTotalElements());
+        productResponse.setTotalPages(productPage.getTotalPages());
+        productResponse.setLastPage(productPage.isLast());
+
         return productResponse;
 
     }
 
     @Override
     public ProductDTO updateProduct(Long productId, ProductDTO productDTO) {
+
         //Get the existing product first from the database
         Product productFromDb = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
@@ -135,8 +223,9 @@ public class ProductServiceImpl implements ProductService {
         //Upload the image to server &
         //Get the file name of uploaded image
 
-        String path = "images/";
-        String fileName = uploadImage(path, image);
+        //String path = "images/"; //hard-coded path in the codebase for storing the file //Not a good practice
+                                 //Therefore move this path into application.properties file
+        String fileName = fileService.uploadImage(path, image);
 
         //Update the new file name to the product
         productFromDb.setImage(fileName);
@@ -148,27 +237,5 @@ public class ProductServiceImpl implements ProductService {
         return modelMapper.map(updatedProduct,ProductDTO.class);
     }
 
-    private String uploadImage(String path, MultipartFile imageFile) throws IOException {
-        //Get the file name of original file
-        String originalFileName = imageFile.getOriginalFilename(); //.getOriginalFileName() will give us entire name
-                                                                    //with its extension
-                                            //If we use .getName() here, we will get StringIndexOutOfBoundException
 
-        //Rename the file uniquely i.e. Generate a Unique file name
-        String randomId = UUID.randomUUID().toString(); //UUID is an in-build class
-        String fileName = randomId.concat(originalFileName.substring(originalFileName.lastIndexOf('.')));
-                    //e.g.: hills.jpg (originalFileName) ===> 4545 (randomId) ===> 4545.jpg (newFileName)
-        String filePath = path + File.separator + fileName;
-
-        //Check if path exists and create
-        File folder = new File(path); //creating a File object from the received path
-        if (!folder.exists())
-            folder.mkdir();
-
-        //Upload to the server
-        Files.copy(imageFile.getInputStream(), Paths.get(filePath));
-
-        //return the file name
-        return fileName;
-    }
 }
