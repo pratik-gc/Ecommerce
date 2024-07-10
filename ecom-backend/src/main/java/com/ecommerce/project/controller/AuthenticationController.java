@@ -23,10 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -133,4 +130,43 @@ public class AuthenticationController {
         return ResponseEntity.ok(new MessageResponse("User registered successfully!"));
     }
 
+//======This API Endpoint is used for Frontend applications to make use of logged-in user's name for display=====
+    @GetMapping("/username")
+    public String currentUserName(Authentication authentication){
+        if (authentication != null)
+            return authentication.getName();
+        else
+            return "";
+    }
+//===================================END=========================================================================
+
+//=====This API Endpoint is used for displaying user information on their Profile Page in Frontend App===========
+    @GetMapping("/userdetails")
+    public ResponseEntity<UserInfoResponse> getUserDetails(Authentication authentication){
+        UserDetailsImpl userDetails =(UserDetailsImpl) authentication.getPrincipal();
+
+        List<String> roles = userDetails.getAuthorities().stream()
+                .map(item -> item.getAuthority())
+                .collect(Collectors.toList());
+
+        UserInfoResponse response = new UserInfoResponse(userDetails.getId(), userDetails.getUsername(), roles);
+        return ResponseEntity.ok().body(response); //sending response containing UserInfo in the body
+    }
+
+//    @GetMapping("/userdetails")
+//    public UserDetailsImpl getUserDetails(Authentication authentication){
+//        if (authentication != null){
+//            return (UserDetailsImpl) authentication.getPrincipal();
+//        }
+//        else
+//            throw new RuntimeException("User details not found!!!");
+//    }
+//==========================================END================================================================
+
+    @PostMapping("/signout")
+    public ResponseEntity<?> signoutUser(){
+        ResponseCookie cookie = jwtUtils.getCleanJwtCookie();
+        return ResponseEntity.ok().header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new MessageResponse("You've been signed out successfully!!! See you soon."));
+    }
 }

@@ -41,7 +41,7 @@ public class JwtUtils {
         Cookie cookie = WebUtils.getCookie(request, jwtCookie);
 
         if (cookie != null){
-            System.out.println("COOKIE: "+ cookie.getValue());
+            //System.out.println("COOKIE: "+ cookie.getValue());
             return cookie.getValue();
         } else
             return null;
@@ -57,12 +57,22 @@ public class JwtUtils {
 
     public ResponseCookie generateJwtCookie(UserDetailsImpl userPrincipal){
         String jwt = generateTokenFromUsername(userPrincipal.getUsername());
-        ResponseCookie cookie = ResponseCookie.from(jwtCookie, jwt).path("/api") //restricting cookie to "/api" API
-                                    .maxAge(24*60*60) //24 hours
-                                    .httpOnly(false) //allowing client side scripts to access the cookie
-                                    .build();
+        ResponseCookie cookie = ResponseCookie.from(jwtCookie, jwt)
+                                              .path("/api") //restricting cookie to "/api" API
+                                              .maxAge(24*60*60) //24 hours
+                                              .httpOnly(false) //allowing client side scripts to access the cookie
+                                              .build();
         return cookie;
     }
+
+//===========For Signing out of user from the system====================
+    public ResponseCookie getCleanJwtCookie(){
+        ResponseCookie cookie = ResponseCookie.from(jwtCookie, null)
+                                              .path("/api")
+                                              .build();
+        return cookie;
+    }
+//===========================END========================================
 
     public String generateTokenFromUsername(String username){
                return Jwts.builder()
