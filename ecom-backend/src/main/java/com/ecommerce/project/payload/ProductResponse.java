@@ -1,8 +1,6 @@
 package com.ecommerce.project.payload;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 
@@ -10,6 +8,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductResponse {
+
     private List<ProductDTO> content;
 
     // Metadata of Pagination for frontend app to display
@@ -19,4 +18,11 @@ public class ProductResponse {
     private Integer totalPages;
     private boolean lastPage;
 
+    public List<ProductDTO> getContent() {
+        return content;
+    }
+
+    public void setContent(List<ProductDTO> content) {
+        this.content = content;
+    }
 }

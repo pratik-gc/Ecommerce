@@ -8,6 +8,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.ToString;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -27,6 +30,7 @@ public class Product {
     @NotBlank
     @Size(min = 5, message = "Product Description must contain atleast 5 characters")
     private String description;
+    //private int quantity = 0;
     private Integer quantity;
     private double price;
     private double discount;
@@ -41,4 +45,9 @@ public class Product {
     @JoinColumn(name = "seller_id")
     private User user;
     //=====================END=================================
+
+    @OneToMany(mappedBy = "product",
+                cascade = {CascadeType.MERGE, CascadeType.PERSIST},
+                fetch = FetchType.EAGER)
+    private List<CartItem> products = new ArrayList<>();
 }
