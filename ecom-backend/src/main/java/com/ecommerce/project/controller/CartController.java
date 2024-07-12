@@ -1,7 +1,10 @@
 package com.ecommerce.project.controller;
 
+import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Cart;
+import com.ecommerce.project.model.CartItem;
 import com.ecommerce.project.payload.CartDTO;
+import com.ecommerce.project.repositories.CartItemRepository;
 import com.ecommerce.project.repositories.CartRepository;
 import com.ecommerce.project.service.CartService;
 import com.ecommerce.project.util.AuthUtil;
@@ -49,4 +52,21 @@ public class CartController {
         return new ResponseEntity<CartDTO>(cartDTO, HttpStatus.OK);
     }
 
+//================Increase or Decrease quantity of a Product in the cart================================
+    @PutMapping("/cart/products/{productId}/quantity/{operation}")
+    public ResponseEntity<CartDTO> updateCartProduct(@PathVariable Long productId, @PathVariable String operation){
+
+        CartDTO cartDTO = cartService.updateProductQuantityInCart(productId,
+                                    operation.equalsIgnoreCase("delete") ? -1 : 1);
+
+        return new ResponseEntity<>(cartDTO, HttpStatus.OK);
+    }
+//======================================END=============================================================
+
+    @DeleteMapping("/carts/{cartId}/product/{productId}")
+    public ResponseEntity<String> deleteProductFromCart(@PathVariable Long cartId, @PathVariable Long productId){
+
+    String status = cartService.deleteProductFromCart(cartId, productId);
+    return new ResponseEntity<>(status, HttpStatus.OK);
+    }
 }
