@@ -31,11 +31,12 @@ public class Payment {
     private String pgStatus;
     private String pgResponseMessage;
 
-    public Payment(Long paymentId, String pgName, String pgPaymentId, String pgStatus, String pgResponseMessage) {
-        this.paymentId = paymentId;
-        this.pgName = pgName;
+
+    public Payment(String paymentMethod, String pgPaymentId, String pgStatus, String pgResponseMessage, String pgName) {
+        this.paymentMethod = paymentMethod;
         this.pgPaymentId = pgPaymentId;
         this.pgStatus = pgStatus;
         this.pgResponseMessage = pgResponseMessage;
+        this.pgName = pgName;
     }
 }
